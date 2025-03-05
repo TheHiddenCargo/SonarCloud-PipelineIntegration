@@ -53,7 +53,6 @@ jobs:
       - name: Build React app
         run: npm run build
         
-        
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
@@ -63,12 +62,9 @@ jobs:
           args: >
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.branch.name=${{ inputs.branch-name }}
             -Dsonar.sources=src
-            -Dsonar.tests=src
-            -Dsonar.test.inclusions=**/*.test.js,**/*.test.jsx,**/*.test.ts,**/*.test.tsx
-            -Dsonar.exclusions=node_modules/**,**/*.test.js,**/*.test.jsx,**/*.test.ts,**/*.test.tsx,src/reportWebVitals.js,src/index.js,public/**
+            -Dsonar.exclusions=node_modules/**,public/**
             
       - name: Wait for SonarCloud Quality Gate
         run: |
