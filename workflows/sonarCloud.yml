@@ -1,72 +1,38 @@
-name: SonarCloud Analysis
+name: Build and SonarQube Analysis
 
 on:
-  workflow_call:
-    inputs:
-      java-version:
-        required: false
-        type: string
-        default: '21'
-      branch-name:
-        required: false
-        type: string
-        default: 'main'
-    secrets:
-      SONAR_TOKEN:
-        required: true
-      SONAR_ORGANIZATION:
-        required: true
-      SONAR_PROJECT_KEY:
-        required: true
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
-  sonarcloud:
-    name: SonarCloud Scan
-    runs-on: ubuntu-latest
-
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest  # Se recomienda Ubuntu para compatibilidad con Node.js y SonarQube
     steps:
-      - name: Checkout repository
+      - name: Checkout código
         uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: ${{ inputs.java-version }}
+          fetch-depth: 0  # Para un mejor análisis de SonarQube
 
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v3
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+          node-version: '18'
 
-      - name: Build and run tests with Maven
-        run: |
-          mvn clean test
+      - name: Instalar dependencias
+        run: npm install
 
-      - name: Build with JaCoCo and analyze with SonarCloud
+      - name: Construir el proyecto
+        run: npm run build
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
-          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-        run: |
-          mvn clean verify sonar:sonar \
-            -Dsonar.organization=$SONAR_ORGANIZATION \
-            -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.branch.name=${{ inputs.branch-name }} \
-            -Dsonar.token=$SONAR_TOKEN \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-
-      - name: Wait for SonarCloud Quality Gate
-        run: |
-          sleep 20
-          SONAR_STATUS=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${{ secrets.SONAR_PROJECT_KEY }}" | jq -r .projectStatus.status)
-          echo "SonarCloud Quality Gate Status: $SONAR_STATUS"
-          if [[ "$SONAR_STATUS" != "OK" ]]; then
-            echo "❌ Quality Gate failed. PR cannot be merged."
-            exit 1
-          fi
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}  # Si usas un servidor privado de SonarQube
