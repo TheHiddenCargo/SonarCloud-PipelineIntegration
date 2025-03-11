@@ -52,7 +52,7 @@ jobs:
 
       # Ejecuta las pruebas y genera el reporte de cobertura
       - name: Run tests with coverage
-        run: npm test -- --coverage --watchAll=false
+        run: npm run test:coverage
 
       - name: Build React app
         run: npm run build
